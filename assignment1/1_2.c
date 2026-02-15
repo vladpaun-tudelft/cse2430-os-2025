@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <errno.h>
 #include <dirent.h>
 
-int main(void) {
+int main() {
     system("mkdir -p tmpdir_system");
     system("ls");
 
