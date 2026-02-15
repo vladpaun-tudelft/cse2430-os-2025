@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-int main(void) {
+int main() {
     char *name = "Vlad Paun";
     int student_number = 6152937;
 
