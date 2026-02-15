@@ -40,6 +40,11 @@ int main(void) {
         
         int ampersand = parse(line, args);
         if (args[0] == NULL) continue;
+        if (strcmp(args[0], "exit") == 0) should_run = 0;
+        if (strcmp(args[0], "cd") == 0) {
+            chdir(args[1]);
+            continue;
+        }
 
         pid_t pid = fork();
         if (pid == 0) {
