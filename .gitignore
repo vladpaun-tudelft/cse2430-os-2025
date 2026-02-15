@@ -56,3 +56,4 @@ dkms.conf
 
 # Assignment binaries (e.g. 1_1, 2_2, 6_4)
 assignment*/[0-9]*_[0-9]*
+!assignment*/[0-9]*_[0-9]*.c
