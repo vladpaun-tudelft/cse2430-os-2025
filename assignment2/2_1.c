@@ -15,42 +15,29 @@ void *long_calculation(void* input) {
 }
 
 int main() {
-
     int nThreads = 0;
+    pthread_t threads[10];
+    char line[256];
 
-    pthread_t current_threads_running[10];
+    while (fgets(line, sizeof(line), stdin) != NULL) {
+      int x = atoi(line);
 
-    while (1) {
-        char line[256];
-        if (fgets(line, sizeof(line), stdin) == NULL) break;
-        int x = atoi(line);
-        
+      if (nThreads == 10 || x < 0 || x > 99)
+        break;
 
-        if (x < 0 || x > 99) {
-            break;
-        }
+      int *input = malloc(sizeof(int));
+      *input = x;
 
-        if (nThreads == 10) {
-            pthread_join(current_threads_running[0],NULL);
-            for (int i = 1; i < nThreads; i++) {
-                current_threads_running[i - 1] = current_threads_running[i];
-            }
-            nThreads--;
-        }
-
-        int *input = malloc(sizeof(int));
-        *input = x;
-
-        if (pthread_create(&current_threads_running[nThreads],NULL, &long_calculation, (void*)input) != 0) {
-            free(input);
-            break;
-        }
+      if (pthread_create(&threads[nThreads], NULL, &long_calculation,
+                         (void *)input) != 0) {
+        free(input);
+        break;
+      } else
         nThreads++;
-
     }
 
     for (int i = 0; i < nThreads; i++) {
-        pthread_join(current_threads_running[i],NULL);
+        pthread_join(threads[i],NULL);
     }
 
 }
