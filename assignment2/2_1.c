@@ -3,15 +3,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-void *long_calculation(void* input) {
-  int x = *(int *) input;
-  free(input);
+void *long_calculation(void *input) {
+    int x = *(int *)input;
+    free(input);
 
-  sleep(1);
+    sleep(1);
 
-  printf("%d", x+1);
-  fflush(stdout);
-  return NULL;
+    printf("%d", x + 1);
+    fflush(stdout);
+    return NULL;
 }
 
 int main() {
@@ -20,24 +20,23 @@ int main() {
     char line[256];
 
     while (fgets(line, sizeof(line), stdin) != NULL) {
-      int x = atoi(line);
+        int x = atoi(line);
 
-      if (nThreads == 10 || x < 0 || x > 99)
-        break;
+        if (nThreads == 10 || x < 0 || x > 99)
+            break;
 
-      int *input = malloc(sizeof(int));
-      *input = x;
+        int *input = malloc(sizeof(int));
+        *input = x;
 
-      if (pthread_create(&threads[nThreads], NULL, &long_calculation,
-                         (void *)input) != 0) {
-        free(input);
-        break;
-      } else
-        nThreads++;
+        if (pthread_create(&threads[nThreads], NULL, &long_calculation,
+                           (void *)input) != 0) {
+            free(input);
+            break;
+        } else
+            nThreads++;
     }
 
     for (int i = 0; i < nThreads; i++) {
-        pthread_join(threads[i],NULL);
+        pthread_join(threads[i], NULL);
     }
-
 }

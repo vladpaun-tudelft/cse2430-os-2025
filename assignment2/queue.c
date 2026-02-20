@@ -4,9 +4,9 @@
 
 #include "queue.h"
 
-#include <stdlib.h>
 #include <assert.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 void addToQueue(Queue *queue, int val) {
     pthread_mutex_lock(&queue->mutex);
@@ -48,7 +48,8 @@ void removeFromQueue(Queue *queue, int *val) {
     queue->front = front->next;
 
     // If there is no new front, also make the back pointer NULL
-    if (!queue->front) queue->back = NULL;
+    if (!queue->front)
+        queue->back = NULL;
 
     // Return the values of the removed node
     *val = front->val;
@@ -59,13 +60,14 @@ void removeFromQueue(Queue *queue, int *val) {
 }
 
 int queueSize(Queue *queue) {
-//     pthread_mutex_lock(&queue->mutex);
+    //     pthread_mutex_lock(&queue->mutex);
     size_t i = 0;
 
     // While `node` is a valid node, increment i and set `node` to the next node
-    for (Node *node = queue->front; node; node = node->next, ++i);
+    for (Node *node = queue->front; node; node = node->next, ++i)
+        ;
 
-//     pthread_mutex_unlock(&queue->mutex);
+    //     pthread_mutex_unlock(&queue->mutex);
     return i;
 }
 

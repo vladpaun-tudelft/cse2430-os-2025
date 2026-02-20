@@ -24,7 +24,7 @@ typedef struct Node {
  */
 typedef struct Queue {
     Node *front; ///< The first node of the queue or NULL if the queue is empty.
-    Node *back; ///< The last node of the queue or NULL if the queue is empty.
+    Node *back;  ///< The last node of the queue or NULL if the queue is empty.
     pthread_mutex_t mutex; ///< The mutex guarding the queue when multiple
                            ///< threads are active.
 } Queue;

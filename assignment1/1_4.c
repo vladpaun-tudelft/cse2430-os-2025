@@ -1,5 +1,5 @@
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #define MAX_LINE 80 /* The maximum length command */
@@ -15,8 +15,8 @@ static int parse(char line[], char *args[]) {
     }
     args[i] = NULL;
 
-    if (i > 0 && strcmp(args[i-1], "&") == 0) {
-        args[i-1] = NULL;
+    if (i > 0 && strcmp(args[i - 1], "&") == 0) {
+        args[i - 1] = NULL;
         return 1;
     }
     return 0;
@@ -32,15 +32,18 @@ int main(void) {
          * After reading user input, the steps are:
          * (1) fork a child process using fork()
          * (2) the child process will invoke execvp()
-        * (3) if command did not include &, parent will invoke wait()
-        */
+         * (3) if command did not include &, parent will invoke wait()
+         */
 
         char line[MAX_LINE];
-        if (fgets(line, sizeof(line), stdin) == NULL) break;
-        
+        if (fgets(line, sizeof(line), stdin) == NULL)
+            break;
+
         int ampersand = parse(line, args);
-        if (args[0] == NULL) continue;
-        if (strcmp(args[0], "exit") == 0) should_run = 0;
+        if (args[0] == NULL)
+            continue;
+        if (strcmp(args[0], "exit") == 0)
+            should_run = 0;
         if (strcmp(args[0], "cd") == 0) {
             chdir(args[1]);
             continue;
@@ -51,8 +54,9 @@ int main(void) {
             execvp(args[0], args);
             return 1;
         } else {
-            if (!ampersand) waitpid(pid, NULL, 0);
+            if (!ampersand)
+                waitpid(pid, NULL, 0);
         }
     }
-  return 0;
+    return 0;
 }
