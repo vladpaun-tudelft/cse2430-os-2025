@@ -1,6 +1,8 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 int thread_count = 0; // increment this
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -101,6 +103,83 @@ void *quicksort(void *v_args) {
     return NULL;
 }
 
+void *quicksort_with_pipes(void *v_args) {
+    arguments *args = (arguments *)v_args;
+
+    if (args->first < args->last) {
+        arguments args1, args2;
+        int pivotElement;
+        pivotElement = pivot(args->array, args->first, args->last);
+
+        args1.array = args->array;
+        args1.first = args->first;
+        args1.last = pivotElement - 1;
+        args2.array = args->array;
+        args2.first = pivotElement + 1;
+        args2.last = args->last;
+
+        if (args->last - args->first < 10) {
+            serial_quicksort(&args1);
+            serial_quicksort(&args2);
+            return NULL;
+        }
+
+        int p[2];
+        if (pipe(p) < 0)
+            exit(1);
+
+        pid_t pid1 = fork();
+        if (pid1 < 0)
+            exit(1);
+
+        if (pid1 == 0) {
+            // first child
+            close(p[0]);
+
+            serial_quicksort(&args1);
+
+            int count1 = args1.last - args1.first + 1;
+            if (count1 > 0) {
+                char *point = (char *)&args1.array[args1.first];
+                size_t bytes = (size_t)count1 * sizeof(args1.array[0]);
+
+                while (bytes > 0) {
+                    ssize_t w = write(p[1], point, bytes);
+                    if (w <= 0) {
+                        close(p[1]);
+                        exit(0);
+                    }
+                    point += (size_t)w;
+                    bytes -= (size_t)w;
+                }
+            }
+            close(p[1]);
+            exit(0);
+        }
+        // daddy
+        close(p[1]);
+        serial_quicksort(&args2);
+
+        int count1 = args1.last - args1.first + 1;
+        if (count1 > 0) {
+            char *point = (char *)&args1.array[args1.first];
+            size_t bytes = (size_t)count1 * sizeof(args1.array[0]);
+
+            while (bytes > 0) {
+                ssize_t r = read(p[0], point, bytes);
+                if (r <= 0)
+                    break;
+                point += (size_t)r;
+                bytes -= (size_t)r;
+            }
+        }
+        close(p[0]);
+        waitpid(pid1, NULL, 0);
+    }
+
+    return NULL;
+}
+
 int main(int argc, char *argv[]) {
     int length;
     int *toBeSorted = NULL;
@@ -123,7 +202,7 @@ int main(int argc, char *argv[]) {
     args.array = toBeSorted;
     args.first = 0;
     args.last = length - 1;
-    quicksort(&args);
+    quicksort_with_pipes(&args);
 
     if (!checkFn(toBeSorted, length)) {
         printf("validation failed!\n");
