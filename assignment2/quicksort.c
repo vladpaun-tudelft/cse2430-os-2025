@@ -1,7 +1,9 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 int thread_count = 0; // increment this
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct {
     int *array;
@@ -63,7 +65,39 @@ int checkFn(int *array, int length) {
 }
 
 void *quicksort(void *v_args) {
-    // TODO
+    arguments *args = (arguments *)v_args;
+
+    if (args->first < args->last) {
+        arguments args1, args2;
+        int pivotElement;
+        pivotElement = pivot(args->array, args->first, args->last);
+
+        args1.array = args->array;
+        args1.first = args->first;
+        args1.last = pivotElement - 1;
+        args2.array = args->array;
+        args2.first = pivotElement + 1;
+        args2.last = args->last;
+
+        if (args->last - args->first < 10000) {
+            serial_quicksort(&args1);
+            serial_quicksort(&args2);
+        } else {
+            pthread_t threads[2];
+
+            pthread_mutex_lock(&mutex);
+            thread_count++;
+            thread_count++;
+            pthread_mutex_unlock(&mutex);
+
+            pthread_create(&threads[0], NULL, quicksort, &args1);
+            pthread_create(&threads[1], NULL, quicksort, &args2);
+
+            pthread_join(threads[0], NULL);
+            pthread_join(threads[1], NULL);
+        }
+    }
+
     return NULL;
 }
 
