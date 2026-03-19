@@ -58,3 +58,4 @@ dkms.conf
 assignment*/[0-9]*_[0-9]*
 !assignment*/[0-9]*_[0-9]*.c
 assignment2/quicksort
+assignment5/assignment
