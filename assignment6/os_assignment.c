@@ -101,21 +101,21 @@ void create_dfs(void) {
 static int os_readdir(const char *path, void *buff, fuse_fill_dir_t fill,
                       off_t off, struct fuse_file_info *fi) {
     DfsDir *dir;
-    DfsPath *dfs_path = dfs_parse_path(path);
-    if (dfs_path == NULL)
-        return -1;
 
-    assert_dfs_ok(dfs_find_dir(root_dir, dfs_path, &dir) != DFS_OK);
+    if (dfs_find_dir_str(root_dir, path, &dir) != DFS_OK)
+        return -EIO;
 
-    // Example: this is how you could iterate over all entries in a dir
+    fill(buff, ".", NULL, 0);
+    fill(buff, "..", NULL, 0);
+
     size_t cursor = 0;
     for (;;) {
         const char *name;
-        DfsStatus get_next_status = dfs_get_next(dir, &cursor, &name, NULL);
-        if (get_next_status == DFS_E_NO_MORE_ENTRIES)
+        DfsStatus status = dfs_get_next(dir, &cursor, &name, NULL);
+        if (status == DFS_E_NO_MORE_ENTRIES)
             break;
-        else if (get_next_status != DFS_OK)
-            return -1;
+        if (status != DFS_OK)
+            return -EIO;
         fill(buff, name, NULL, 0);
     }
 
