@@ -347,7 +347,46 @@ static int os_write(const char *path, const char *buff, size_t size, off_t off,
  * @see [`man 2 creat`](https://linux.die.net/man/2/creat) (that is not a typo)
  */
 static int os_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
-    return -ENOTSUP;
+    DfsPath *dfs_path = dfs_parse_path(path);
+    if (!dfs_path)
+        return -ENOMEM;
+
+    char *file_name = NULL;
+    DfsStatus status = dfs_path_pop(dfs_path, &file_name);
+    if (status != DFS_OK) {
+        dfs_destroy_path(dfs_path);
+        return handleErrors(status);
+    }
+
+    if (file_name == NULL) {
+        dfs_destroy_path(dfs_path);
+        return -EEXIST;
+    }
+
+    DfsDir *parent_dir;
+    status = dfs_find_dir(root_dir, dfs_path, &parent_dir);
+    dfs_destroy_path(dfs_path);
+
+    if (status != DFS_OK) {
+        free(file_name);
+        return handleErrors(status);
+    }
+
+    DfsFile *new_file = dfs_create_file();
+    if (!new_file) {
+        free(file_name);
+        return -ENOMEM;
+    }
+
+    status = dfs_add_file(parent_dir, file_name, new_file);
+    free(file_name);
+
+    if (status != DFS_OK) {
+        dfs_destroy_file(new_file);
+        return handleErrors(status);
+    }
+
+    return 0;
 }
 
 /**
@@ -359,7 +398,47 @@ static int os_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
  *
  * @see [`man 2 unlink`](https://linux.die.net/man/2/unlink)
  */
-static int os_unlink(const char *path) { return -ENOTSUP; }
+static int os_unlink(const char *path) {
+    DfsPath *dfs_path = dfs_parse_path(path);
+    if (!dfs_path)
+        return -ENOMEM;
+
+    char *file_name = NULL;
+    DfsStatus status = dfs_path_pop(dfs_path, &file_name);
+    if (status != DFS_OK) {
+        dfs_destroy_path(dfs_path);
+        return handleErrors(status);
+    }
+
+    if (file_name == NULL) {
+        dfs_destroy_path(dfs_path);
+        return -EEXIST;
+    }
+
+    DfsDir *parent_dir;
+    status = dfs_find_dir(root_dir, dfs_path, &parent_dir);
+    dfs_destroy_path(dfs_path);
+
+    if (status != DFS_OK) {
+        free(file_name);
+        return handleErrors(status);
+    }
+
+    DfsFile *file_obj;
+    status = dfs_get_file(parent_dir, file_name, &file_obj);
+    if (status != DFS_OK) {
+        free(file_name);
+        return handleErrors(status);
+    }
+
+    status = dfs_remove_file(parent_dir, file_name, NULL);
+    free(file_name);
+
+    if (status != DFS_OK)
+        return handleErrors(status);
+
+    return 0;
+}
 
 /// @}
 /**
