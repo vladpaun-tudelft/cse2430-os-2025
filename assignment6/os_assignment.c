@@ -13,6 +13,7 @@
 #include "dfs.h"
 #include "strdup.h"
 #include <asm-generic/errno-base.h>
+#include <asm-generic/errno.h>
 
 // This is to silence an error locally, maybe it breaks shit on weblab, idk?
 #define _FILE_OFFSET_BITS 64
@@ -211,7 +212,52 @@ static int os_mkdir(const char *path, mode_t mode) {
  *
  * @see [`man 2 rmdir`](https://linux.die.net/man/2/rmdir)
  */
-static int os_rmdir(const char *path) { return -ENOTSUP; }
+static int os_rmdir(const char *path) {
+    DfsPath *dfs_path = dfs_parse_path(path);
+    if (!dfs_path)
+        return -ENOMEM;
+
+    char *dir_name = NULL;
+    DfsStatus status = dfs_path_pop(dfs_path, &dir_name);
+    if (status != DFS_OK) {
+        dfs_destroy_path(dfs_path);
+        return handleErrors(status);
+    }
+
+    if (dir_name == NULL) {
+        dfs_destroy_path(dfs_path);
+        return -EEXIST;
+    }
+
+    DfsDir *parent_dir;
+    status = dfs_find_dir(root_dir, dfs_path, &parent_dir);
+    dfs_destroy_path(dfs_path);
+
+    if (status != DFS_OK) {
+        free(dir_name);
+        return handleErrors(status);
+    }
+
+    DfsDir *child_dir;
+    status = dfs_get_dir(parent_dir, dir_name, &child_dir);
+    if (status != DFS_OK) {
+        free(dir_name);
+        return handleErrors(status);
+    }
+
+    if (dfs_get_dir_size(child_dir) != 0) {
+        free(dir_name);
+        return -ENOTEMPTY;
+    }
+
+    status = dfs_remove_dir(parent_dir, dir_name, NULL);
+    free(dir_name);
+
+    if (status != DFS_OK)
+        return handleErrors(status);
+
+    return 0;
+}
 
 /**
  * Reads (part of) a file.
