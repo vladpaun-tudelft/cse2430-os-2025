@@ -13,6 +13,8 @@
 #include "dfs.h"
 #include "strdup.h"
 
+// This is to silence an error locally, maybe it breaks shit on weblab, idk?
+#define _FILE_OFFSET_BITS 64
 #define FUSE_USE_VERSION 31
 #include <fuse.h>
 
