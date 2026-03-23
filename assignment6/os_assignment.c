@@ -100,19 +100,12 @@ void create_dfs(void) {
  */
 static int os_readdir(const char *path, void *buff, fuse_fill_dir_t fill,
                       off_t off, struct fuse_file_info *fi) {
-    // Example: this is how you find the required directory.
     DfsDir *dir;
-    DfsStatus dir_status = dfs_find_dir_str(root_dir, path, &dir);
-    // This could fail though! You should return an error if this is so, in
-    // other functions as well
-    if (dir_status == DFS_E_ENTRY_DOES_NOT_EXIST) {
-        return -ENOENT; // Error: no entity
-    }
-    // Other errors are also possible
+    DfsPath *dfs_path = dfs_parse_path(path);
+    if (dfs_path == NULL)
+        return -1;
 
-    // Example: this is how you add a folder "Documents" to the buffer
-    // although this "Documents" folder does not exist.
-    fill(buff, "Documents", NULL, 0);
+    assert_dfs_ok(dfs_find_dir(root_dir, dfs_path, &dir) != DFS_OK);
 
     // Example: this is how you could iterate over all entries in a dir
     size_t cursor = 0;
@@ -121,11 +114,11 @@ static int os_readdir(const char *path, void *buff, fuse_fill_dir_t fill,
         DfsStatus get_next_status = dfs_get_next(dir, &cursor, &name, NULL);
         if (get_next_status == DFS_E_NO_MORE_ENTRIES)
             break;
-
-        // Do something with this entry
+        else if (get_next_status != DFS_OK)
+            return -1;
+        fill(buff, name, NULL, 0);
     }
 
-    // Returning 0 means all-ok.
     return 0;
 }
 
