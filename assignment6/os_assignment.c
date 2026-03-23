@@ -277,7 +277,19 @@ static int os_rmdir(const char *path) {
  */
 static int os_read(const char *path, char *buff, size_t size, off_t off,
                    struct fuse_file_info *fi) {
-    return -ENOTSUP;
+    DfsFile *file;
+    DfsStatus status = dfs_find_file_str(root_dir, path, &file);
+    if (status != DFS_OK)
+        return handleErrors(status);
+
+    if (off < 0)
+        return EINVAL;
+
+    if ((size_t)off >= file->length)
+        return 0;
+    size_t bytes = size < file->length - off ? size : file->length - off;
+    memcpy(buff, file->contents + off, bytes);
+    return bytes;
 }
 
 /**
@@ -298,7 +310,29 @@ static int os_read(const char *path, char *buff, size_t size, off_t off,
  */
 static int os_write(const char *path, const char *buff, size_t size, off_t off,
                     struct fuse_file_info *fi) {
-    return -ENOTSUP;
+    DfsFile *file;
+    DfsStatus status = dfs_find_file_str(root_dir, path, &file);
+    if (status != DFS_OK)
+        return handleErrors(status);
+
+    if (off < 0)
+        return -EINVAL;
+
+    size_t end = off + size;
+    if (end > file->length) {
+        char *new_contents = realloc(file->contents, end);
+        if (!new_contents)
+            return -ENOMEM;
+
+        file->contents = new_contents;
+
+        // maybe pad with 0's if needed
+
+        file->length = end;
+    }
+
+    memcpy(file->contents + off, buff, size);
+    return size;
 }
 
 /**
