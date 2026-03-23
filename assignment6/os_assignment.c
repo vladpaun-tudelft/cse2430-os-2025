@@ -12,6 +12,7 @@
 #include "dfs-path.h"
 #include "dfs.h"
 #include "strdup.h"
+#include <asm-generic/errno-base.h>
 
 // This is to silence an error locally, maybe it breaks shit on weblab, idk?
 #define _FILE_OFFSET_BITS 64
@@ -84,6 +85,29 @@ void create_dfs(void) {
  * @{
  */
 
+static inline int handleErrors(DfsStatus status) {
+    switch (status) {
+    case DFS_OK:
+        return 0;
+    case DFS_E_INTERNAL:
+        return -EIO;
+    case DFS_E_MALLOC_FAILURE:
+        return -ENOMEM;
+    case DFS_E_ENTRY_DOES_NOT_EXIST:
+        return -ENOENT;
+    case DFS_E_ENTRY_ALREADY_EXISTS:
+        return -EEXIST;
+    case DFS_E_NO_MORE_ENTRIES:
+        return 0;
+    case DFS_E_NOT_A_DIRECTORY:
+        return -ENOTDIR;
+    case DFS_E_NOT_A_FILE:
+        return -EISDIR;
+    default:
+        return -EIO;
+    }
+}
+
 /**
  * Lists files/directories available in a specific directory.
  *
@@ -102,8 +126,9 @@ static int os_readdir(const char *path, void *buff, fuse_fill_dir_t fill,
                       off_t off, struct fuse_file_info *fi) {
     DfsDir *dir;
 
-    if (dfs_find_dir_str(root_dir, path, &dir) != DFS_OK)
-        return -EIO;
+    DfsStatus status = dfs_find_dir_str(root_dir, path, &dir);
+    if (status != DFS_OK)
+        return handleErrors(status);
 
     fill(buff, ".", NULL, 0);
     fill(buff, "..", NULL, 0);
@@ -115,7 +140,7 @@ static int os_readdir(const char *path, void *buff, fuse_fill_dir_t fill,
         if (status == DFS_E_NO_MORE_ENTRIES)
             break;
         if (status != DFS_OK)
-            return -EIO;
+            return handleErrors(status);
         fill(buff, name, NULL, 0);
     }
 
@@ -132,7 +157,48 @@ static int os_readdir(const char *path, void *buff, fuse_fill_dir_t fill,
  *
  * @see [`man 2 mkdir`](https://linux.die.net/man/2/mkdir)
  */
-static int os_mkdir(const char *path, mode_t mode) { return -ENOTSUP; }
+static int os_mkdir(const char *path, mode_t mode) {
+    DfsPath *dfs_path = dfs_parse_path(path);
+    if (!dfs_path)
+        return -ENOMEM;
+
+    char *dir_name = NULL;
+    DfsStatus status = dfs_path_pop(dfs_path, &dir_name);
+    if (status != DFS_OK) {
+        dfs_destroy_path(dfs_path);
+        return handleErrors(status);
+    }
+
+    if (dir_name == NULL) {
+        dfs_destroy_path(dfs_path);
+        return -EEXIST;
+    }
+
+    DfsDir *parent_dir;
+    status = dfs_find_dir(root_dir, dfs_path, &parent_dir);
+    dfs_destroy_path(dfs_path);
+
+    if (status != DFS_OK) {
+        free(dir_name);
+        return handleErrors(status);
+    }
+
+    DfsDir *new_dir = dfs_create_dir();
+    if (!new_dir) {
+        free(dir_name);
+        return -ENOMEM;
+    }
+
+    status = dfs_add_dir(parent_dir, dir_name, new_dir);
+    free(dir_name);
+
+    if (status != DFS_OK) {
+        dfs_destroy_dir(new_dir);
+        return handleErrors(status);
+    }
+
+    return 0;
+}
 
 /**
  * Removes a directory.
