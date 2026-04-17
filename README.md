@@ -1,5 +1,9 @@
 # cse2430-os-2025
 
+> **Archived repository**  
+> Personal archive of my TU Delft CSE2430 coursework. This repo is not maintained and is kept for reference only.
+
+
 TU Delft CSE2430 Operating Systems lab assignments.
 
 ## Docker workflow
